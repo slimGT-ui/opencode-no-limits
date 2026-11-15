@@ -1,12 +1,17 @@
+import type { ModelSelection } from "@/providers/models/selection"
+
 // Free usage no longer replaces or blocks the session composer.
-// The compatibility exports are removed together with their callers in a later cleanup stage.
-export function useFreeLimit() {
+// Keep the existing call signatures until the composer integration is removed.
+export function useFreeLimit(_paid: () => boolean) {
   return {
     resetAt: () => null,
     active: () => false,
   }
 }
 
-export function SessionFreeLimitPanel() {
+export function SessionFreeLimitPanel(_props: {
+  resetAt: number | null
+  selection: () => ModelSelection | undefined
+}) {
   return null
 }
