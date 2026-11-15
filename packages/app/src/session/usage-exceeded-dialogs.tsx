@@ -5,6 +5,7 @@ import { Schema } from "effect"
 import { Persistence } from "@/runtime/persistence/schema"
 import { useSessionLayout } from "./session-layout"
 import { useDialog } from "@opencode/ui/context"
+import type { ModelSelection } from "@/providers/models/selection"
 
 const MAX_RETRY_AFTER_MS = 45 * 86_400_000
 
@@ -44,7 +45,10 @@ export function formatLimitReset(locale: string, created: number, retryAfterMs: 
   ).format(at)
 }
 
-export function useUsageExceededDialogs() {
+export function useUsageExceededDialogs(_input?: {
+  selection?: () => ModelSelection | undefined
+  onDone?: () => void
+}) {
   const sdk = useWorkspaceLocation()
   const dialog = useDialog()
   const { params } = useSessionLayout()
