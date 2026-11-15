@@ -5,11 +5,12 @@ import { Schema } from "effect"
 import { Persistence } from "@/runtime/persistence/schema"
 import { useSessionLayout } from "./session-layout"
 import { useDialog } from "@opencode/ui/context"
-import { CHATGPT_USAGE_LIMIT_WINDOW } from "./usage-exceeded-dialogs-constants"
 
 const MAX_RETRY_AFTER_MS = 45 * 86_400_000
 
 const GO_UPSELL_WINDOW = 86_400_000 // 24 hrs
+
+const CHATGPT_USAGE_LIMIT_WINDOW = 86_400_000 // 24 hrs
 
 // When a usage limit resets, or undefined when the refusal's delay is missing or out of range.
 export function limitResetAt(created: number, retryAfterMs: number | undefined) {
@@ -61,7 +62,7 @@ export function useUsageExceededDialogs() {
 
       if (error.type !== "provider.chatgpt-limit") return
 
-      if (chatgptUsageLimit.lastSeenAt && Date.now() - chatgptUsageLimit.lastSeenAt < 86_400_000) return
+      if (chatgptUsageLimit.lastSeenAt && Date.now() - chatgptUsageLimit.lastSeenAt < CHATGPT_USAGE_LIMIT_WINDOW) return
 
       void import("@/providers/connect/chatgpt-usage-limit").then((usage) => {
         if (dialog.active) return
