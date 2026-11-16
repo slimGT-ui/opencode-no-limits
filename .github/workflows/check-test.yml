@@ -113,6 +113,10 @@ jobs:
         if: runner.os == 'Linux'
         run: bun run lint:effect-simplifications
 
+      - name: Install ripgrep runtime
+        if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install --yes ripgrep
+
       - name: Configure git identity
         run: |
           git config --global user.email "bot@opencode.ai"
