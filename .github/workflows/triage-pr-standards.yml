@@ -1,7 +1,9 @@
 name: triage-pr-standards
 
 on:
-  pull_request:
+  # This workflow only runs trusted inline github-script code; it never checks out PR code.
+  # target permissions are required to label/comment on PRs opened from forks.
+  pull_request_target:
     types: [opened, edited, synchronize, reopened]
 
 jobs:
@@ -28,13 +30,19 @@ jobs:
 
             // Check if author is a team member or bot
             if (login === 'opencode-agent[bot]') return;
-            const { data: file } = await github.rest.repos.getContent({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              path: '.github/TEAM_MEMBERS',
-              ref: pr.base.ref
-            });
-            const members = Buffer.from(file.content, 'base64').toString().split('\n').map(l => l.trim()).filter(Boolean);
+            let members = [];
+            try {
+              const { data: file } = await github.rest.repos.getContent({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                path: '.github/TEAM_MEMBERS',
+                ref: 'main'
+              });
+              members = Buffer.from(file.content, 'base64').toString().split('\n').map(l => l.trim()).filter(Boolean);
+            } catch (error) {
+              // Missing membership metadata must not disable PR standards checks.
+              core.warning(`Could not read .github/TEAM_MEMBERS from main: ${error.message}`);
+            }
             if (members.includes(login)) {
               console.log(`Skipping: ${login} is a team member`);
               return;
@@ -183,13 +191,19 @@ jobs:
 
             // Check if author is a team member or bot
             if (login === 'opencode-agent[bot]') return;
-            const { data: file } = await github.rest.repos.getContent({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              path: '.github/TEAM_MEMBERS',
-              ref: pr.base.ref
-            });
-            const members = Buffer.from(file.content, 'base64').toString().split('\n').map(l => l.trim()).filter(Boolean);
+            let members = [];
+            try {
+              const { data: file } = await github.rest.repos.getContent({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                path: '.github/TEAM_MEMBERS',
+                ref: 'main'
+              });
+              members = Buffer.from(file.content, 'base64').toString().split('\n').map(l => l.trim()).filter(Boolean);
+            } catch (error) {
+              // Missing membership metadata must not disable PR standards checks.
+              core.warning(`Could not read .github/TEAM_MEMBERS from main: ${error.message}`);
+            }
             if (members.includes(login)) {
               console.log(`Skipping: ${login} is a team member`);
               return;
@@ -209,7 +223,7 @@ jobs:
             const hasIssueSection = /### Issue for this PR/.test(body);
 
             if (!hasWhatSection || !hasTypeSection || !hasVerifySection || !hasChecklistSection || !hasIssueSection) {
-              issues.push('PR description is missing required template sections. Please use the [PR template](../blob/${pr.base.ref}/.github/pull_request_template.md).');
+              issues.push('PR description is missing required template sections. Please use the [PR template](../blob/main/.github/pull_request_template.md).');
             }
 
             // Check: "What does this PR do?" has real content (not just placeholder text)
