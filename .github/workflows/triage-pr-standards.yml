@@ -1,8 +1,8 @@
 name: triage-pr-standards
 
 on:
-  pull_request_target:
-    types: [opened, edited, synchronize]
+  pull_request:
+    types: [opened, edited, synchronize, reopened]
 
 jobs:
   check-standards:
