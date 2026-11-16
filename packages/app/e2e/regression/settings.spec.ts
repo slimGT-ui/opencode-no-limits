@@ -1903,7 +1903,7 @@ test("providers: Back during a pending API key request does not report the provi
   await expect(dialog.getByPlaceholder("API key")).toHaveValue("")
 })
 
-test("providers: the free tier upsell opens Go on its own, sized to its content", async ({ page }) => {
+test("providers: a free tier limit does not open the Go upsell", async ({ page }) => {
   const view = await openSession(page, { name: "FreeTier", integrations: consoleIntegrations })
   await view.push([
     {
@@ -1919,17 +1919,9 @@ test("providers: the free tier upsell opens Go on its own, sized to its content"
       },
     },
   ])
-  await page
-    .getByRole("dialog", { name: "Free limit reached" })
-    .getByRole("button", { name: "Subscribe", exact: true })
-    .click()
 
-  const dialog = page.getByRole("dialog", { name: "Connect OpenCode Go", exact: true })
-  const container = page.locator('[data-slot="dialog-container"]')
-  await expect(dialog.getByPlaceholder("API key")).toBeVisible()
-  // Nothing to go back to: the upsell opened the dialog straight on Go.
-  await expect(dialog.getByRole("navigation").getByRole("button")).toHaveCount(0)
-  await expect.poll(async () => (await container.boundingBox())?.height).toBeLessThan(512)
+  await expect(page.getByRole("dialog", { name: "Free limit reached" })).toHaveCount(0)
+  await expect(page.getByRole("dialog", { name: "Connect OpenCode Go" })).toHaveCount(0)
 })
 
 test("providers: the connect dialog lists connected providers and manages their accounts", async ({ page }) => {
