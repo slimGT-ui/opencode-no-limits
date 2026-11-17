@@ -353,26 +353,29 @@ test("ChatGPT's usage limit opens the ChatGPT usage dialog", async ({ page }) =>
 
   await expect(page.getByText("Refactor the parser", { exact: true })).toBeVisible()
 
-  await view.push([
-    {
-      id: "evt_chatgpt_limit_1",
-      created: T0 + 2,
-      type: "session.step.failed",
-      location: { directory: view.directory },
-      durable: { aggregateID: sessionID, seq: 1, version: 1 },
-      data: {
-        sessionID,
-        assistantMessageID: "msg_chatgpt_assistant",
-        error: {
-          type: "provider.chatgpt-limit",
-          message: "ChatGPT usage limit reached. Check ChatGPT Settings → Usage for details.",
-          status: 429,
-        },
+  const failed = (id: string, seq: number) => ({
+    id,
+    created: T0 + seq + 1,
+    type: "session.step.failed" as const,
+    location: { directory: view.directory },
+    durable: { aggregateID: sessionID, seq, version: 1 as const },
+    data: {
+      sessionID,
+      assistantMessageID: "msg_chatgpt_assistant",
+      error: {
+        type: "provider.chatgpt-limit",
+        message: "ChatGPT usage limit reached. Check ChatGPT Settings → Usage for details.",
+        status: 429,
       },
     },
-  ])
+  })
 
-  await expect(page.getByRole("dialog", { name: "ChatGPT usage limit reached" })).toBeVisible()
+  // Two limit events can arrive before the lazy dialog module finishes loading.
+  await view.push([failed("evt_chatgpt_limit_1", 1), failed("evt_chatgpt_limit_2", 2)])
+
+  const usageDialog = page.getByRole("dialog", { name: "ChatGPT usage limit reached" })
+  await expect(usageDialog).toBeVisible()
+  await expect(usageDialog).toHaveCount(1)
 })
 
 test("a catalog refresh cannot replace an existing session's model", async ({ page }) => {
