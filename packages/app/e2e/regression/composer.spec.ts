@@ -207,6 +207,9 @@ test("the free usage limit does not block the composer or open upsell UI", async
   ])
 
   await expect(view.editor).toBeVisible()
+  await expect(view.editor).toBeEditable()
+  await expect(view.editor).toHaveText("Refactor the parser")
+  await expect(page.getByRole("dialog", { name: "Free limit reached", exact: true })).toHaveCount(0)
   await expect(page.locator('[data-component="session-free-limit"]')).toHaveCount(0)
   await expect(page.getByRole("dialog")).toHaveCount(0)
 
