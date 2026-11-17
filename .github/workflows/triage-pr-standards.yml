@@ -19,6 +19,7 @@ jobs:
           script: |
             const pr = context.payload.pull_request;
             const login = pr.user.login;
+            const defaultBranch = context.payload.repository.default_branch;
 
             // Skip PRs older than Feb 18, 2026 at 6PM EST (Feb 19, 2026 00:00 UTC)
             const cutoff = new Date('2026-02-19T00:00:00Z');
@@ -36,12 +37,13 @@ jobs:
                 owner: context.repo.owner,
                 repo: context.repo.repo,
                 path: '.github/TEAM_MEMBERS',
-                ref: 'main'
+                ref: defaultBranch
               });
               members = Buffer.from(file.content, 'base64').toString().split('\n').map(l => l.trim()).filter(Boolean);
             } catch (error) {
-              // Missing membership metadata must not disable PR standards checks.
-              core.warning(`Could not read .github/TEAM_MEMBERS from main: ${error.message}`);
+              if (error.status !== 404) throw error;
+              // A missing membership file means an empty list; standards checks still run.
+              core.warning(`Could not find .github/TEAM_MEMBERS on ${defaultBranch}; continuing with an empty list.`);
             }
             if (members.includes(login)) {
               console.log(`Skipping: ${login} is a team member`);
@@ -110,7 +112,7 @@ jobs:
 
             Where \`scope\` is the package name (e.g., \`app\`, \`desktop\`, \`opencode\`).
 
-            See [CONTRIBUTING.md](../blob/main/CONTRIBUTING.md#pr-titles) for details.`);
+            See [CONTRIBUTING.md](../blob/${defaultBranch}/CONTRIBUTING.md#pr-titles) for details.`);
               return;
             }
 
@@ -161,7 +163,7 @@ jobs:
             1. Open an issue describing the bug/feature (if one doesn't exist)
             2. Add \`Fixes #<number>\` or \`Closes #<number>\` to this PR description
 
-            See [CONTRIBUTING.md](../blob/main/CONTRIBUTING.md#issue-first-policy) for details.`);
+            See [CONTRIBUTING.md](../blob/${defaultBranch}/CONTRIBUTING.md#issue-first-policy) for details.`);
               return;
             }
 
@@ -180,6 +182,7 @@ jobs:
           script: |
             const pr = context.payload.pull_request;
             const login = pr.user.login;
+            const defaultBranch = context.payload.repository.default_branch;
 
             // Skip PRs older than Feb 18, 2026 at 6PM EST (Feb 19, 2026 00:00 UTC)
             const cutoff = new Date('2026-02-19T00:00:00Z');
@@ -197,12 +200,13 @@ jobs:
                 owner: context.repo.owner,
                 repo: context.repo.repo,
                 path: '.github/TEAM_MEMBERS',
-                ref: 'main'
+                ref: defaultBranch
               });
               members = Buffer.from(file.content, 'base64').toString().split('\n').map(l => l.trim()).filter(Boolean);
             } catch (error) {
-              // Missing membership metadata must not disable PR standards checks.
-              core.warning(`Could not read .github/TEAM_MEMBERS from main: ${error.message}`);
+              if (error.status !== 404) throw error;
+              // A missing membership file means an empty list; standards checks still run.
+              core.warning(`Could not find .github/TEAM_MEMBERS on ${defaultBranch}; continuing with an empty list.`);
             }
             if (members.includes(login)) {
               console.log(`Skipping: ${login} is a team member`);
@@ -223,7 +227,7 @@ jobs:
             const hasIssueSection = /### Issue for this PR/.test(body);
 
             if (!hasWhatSection || !hasTypeSection || !hasVerifySection || !hasChecklistSection || !hasIssueSection) {
-              issues.push('PR description is missing required template sections. Please use the [PR template](../blob/main/.github/pull_request_template.md).');
+              issues.push(`PR description is missing required template sections. Please use the [PR template](../blob/${defaultBranch}/.github/pull_request_template.md).`);
             }
 
             // Check: "What does this PR do?" has real content (not just placeholder text)
@@ -315,7 +319,7 @@ jobs:
               const existing = comments.find(c => c.body.includes(marker));
 
               const body_text = `${marker}
-            This PR doesn't fully meet our [contributing guidelines](../blob/main/CONTRIBUTING.md) and [PR template](../blob/main/.github/pull_request_template.md).
+            This PR doesn't fully meet our [contributing guidelines](../blob/${defaultBranch}/CONTRIBUTING.md) and [PR template](../blob/${defaultBranch}/.github/pull_request_template.md).
 
             **What needs to be fixed:**
             ${issues.map(i => `- ${i}`).join('\n')}
