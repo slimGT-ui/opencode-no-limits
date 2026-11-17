@@ -1809,6 +1809,7 @@ test("providers: OpenCode Console signs in from its method list", async ({ page,
 
 test("providers: OpenCode Go connects with its own methods, not the Console sign-in", async ({ page }) => {
   const attempts: string[] = []
+  const keys: unknown[] = []
 
   const { settings } = await open(page, {
     integrations: consoleIntegrations,
@@ -1816,6 +1817,9 @@ test("providers: OpenCode Go connects with its own methods, not the Console sign
       attempts.push(input.integrationID)
 
       return { url: "https://auth.example.test/device?user_code=ABCD-EFGH" }
+    },
+    onConnectKey: (input) => {
+      keys.push(input.body)
     },
   })
 
@@ -1826,6 +1830,16 @@ test("providers: OpenCode Go connects with its own methods, not the Console sign
     .click()
   const dialog = page.getByRole("dialog", { name: "Connect OpenCode Go", exact: true })
   await expect(dialog.getByPlaceholder("API key")).toBeVisible()
+  expect(attempts).toEqual([])
+
+  await dialog.getByPlaceholder("API key").fill("sk-go-test")
+  const submitted = page.waitForRequest(
+    (request) =>
+      request.method() === "POST" && new URL(request.url()).pathname === "/api/integration/opencode-go/connect/key",
+  )
+  await dialog.getByRole("button", { name: "Continue", exact: true }).click()
+  await submitted
+  expect(keys).toEqual([expect.objectContaining({ key: "sk-go-test" })])
   expect(attempts).toEqual([])
 })
 
