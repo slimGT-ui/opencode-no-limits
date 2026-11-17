@@ -1839,7 +1839,7 @@ test("providers: OpenCode Go connects with its own methods, not the Console sign
   )
   await dialog.getByRole("button", { name: "Continue", exact: true }).click()
   await submitted
-  expect(keys).toEqual([expect.objectContaining({ key: "sk-go-test" })])
+  await expect.poll(() => keys).toEqual([expect.objectContaining({ key: "sk-go-test" })])
   expect(attempts).toEqual([])
 })
 
