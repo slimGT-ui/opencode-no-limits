@@ -363,7 +363,7 @@ test("ChatGPT's usage limit opens the ChatGPT usage dialog", async ({ page }) =>
       sessionID,
       assistantMessageID: "msg_chatgpt_assistant",
       error: {
-        type: "provider.chatgpt-limit",
+        type: "provider.chatgpt-limit" as const,
         message: "ChatGPT usage limit reached. Check ChatGPT Settings → Usage for details.",
         status: 429,
       },
