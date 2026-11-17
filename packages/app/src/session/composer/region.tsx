@@ -250,6 +250,32 @@ export function createActiveSessionRegion(input: {
   const forkMessage: NonNullable<SessionUserActions["fork"]> = (target) => fork(target).then(() => undefined)
 
   const recalled = new Set<string>()
+  const pendingRecall = new Map<string, () => void>()
+
+  // A limit event can arrive while the composer draft is still hydrating (for example, after a reload).
+  // Defer the recall until the prompt is ready instead of permanently dropping the event.
+  const recallWhenReady = (assistantMessageID: string, recall: () => void) => {
+    if (recalled.has(assistantMessageID)) return
+
+    if (!prompt.ready()) {
+      pendingRecall.set(assistantMessageID, recall)
+      return
+    }
+
+    recalled.add(assistantMessageID)
+    recall()
+  }
+
+  createEffect(() => {
+    if (!prompt.ready()) return
+
+    for (const [assistantMessageID, recall] of pendingRecall) {
+      pendingRecall.delete(assistantMessageID)
+      if (recalled.has(assistantMessageID)) continue
+      recalled.add(assistantMessageID)
+      recall()
+    }
+  })
 
   // The free allowance or a Go usage limit stops a prompt after it was sent. Hand its text back so switching models and
   // resending is one step, unless the user has already started typing something else.
@@ -262,30 +288,28 @@ export function createActiveSessionRegion(input: {
 
       if (type !== "provider.free-limit" && type !== "provider.go-limit") return
 
-      if (recalled.has(event.data.assistantMessageID)) return
-      recalled.add(event.data.assistantMessageID)
-
-      if (
-        !prompt.ready() ||
-        !prompt.current().every((part) => part.type === "text" && part.content.length === 0) ||
-        prompt.context.items().length > 0
-      )
-        return
-
-      const messages = input.session.history.messages()
-      const end = messages.findIndex((item) => item.id === event.data.assistantMessageID)
-
-      for (let i = end - 1; i >= 0; i--) {
-        const item = messages[i]
-
-        if (!item || item.type === "shell" || item.type === "idle") return
-
-        if (item.type === "user" && !data.session.input.has(sessionID, item.id)) {
-          revert.recall(item)
-
+      recallWhenReady(event.data.assistantMessageID, () => {
+        if (
+          !prompt.current().every((part) => part.type === "text" && part.content.length === 0) ||
+          prompt.context.items().length > 0
+        )
           return
+
+        const messages = input.session.history.messages()
+        const end = messages.findIndex((item) => item.id === event.data.assistantMessageID)
+
+        for (let i = end - 1; i >= 0; i--) {
+          const item = messages[i]
+
+          if (!item || item.type === "shell" || item.type === "idle") return
+
+          if (item.type === "user" && !data.session.input.has(sessionID, item.id)) {
+            revert.recall(item)
+
+            return
+          }
         }
-      }
+      })
     }),
   )
 
