@@ -42,8 +42,8 @@ env:
   # Push and pull request runs test only what changed. Manual runs and the release gate test everything: they
   # have no base commit to diff against.
   AFFECTED: ${{ github.event_name == 'push' || github.event_name == 'pull_request' }}
-  # Pull requests diff against the merge's first parent; pushes diff against the previous dev head.
-  TURBO_SCM_BASE: ${{ github.event_name == 'pull_request' && format('{0}^1', github.sha) || github.event.before }}
+  # Pull requests compare against their actual base commit; pushes compare against the previous head.
+  TURBO_SCM_BASE: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.sha || github.event.before }}
   TURBO_SCM_HEAD: ${{ github.sha }}
 
 jobs:
@@ -94,8 +94,8 @@ jobs:
         uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
-          # Pull requests diff against the merge's first parent; pushes diff against the previous dev head.
-          fetch-depth: ${{ github.event_name == 'pull_request' && 2 || 0 }}
+          # Fetch full history so Turbo can reliably compare the PR head with its base commit.
+          fetch-depth: 0
 
       - name: Setup Node
         uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
@@ -112,6 +112,10 @@ jobs:
       - name: Check Effect simplifications
         if: runner.os == 'Linux'
         run: bun run lint:effect-simplifications
+
+      - name: Install ripgrep runtime
+        if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install --yes ripgrep
 
       - name: Configure git identity
         run: |
