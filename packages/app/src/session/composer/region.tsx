@@ -38,7 +38,6 @@ import { SessionComposerRegion } from "./session-composer-region"
 import { createSessionComposerController, type SessionComposerController } from "./controller"
 import { SessionQueuePanel } from "./queue-panel"
 import { SessionGoLimitTray } from "./go-limit-tray"
-import { SessionFreeLimitPanel, useFreeLimit } from "./free-limit-panel"
 import { SessionActivityChips, type SessionActivityItem } from "./activity-chips"
 import { SessionComposerLane, useComposerLaneAlignment } from "./composer-lane"
 import { SessionTodoPill } from "./todo-pill"
@@ -556,7 +555,6 @@ export function ActiveSessionComposerRegion(props: {
     return props.session.data.info()?.outcome
   }
 
-  const freeLimit = useFreeLimit(() => props.model.composer.model.paid)
 
   return (
     <SessionComposerRegion
@@ -610,24 +608,14 @@ export function ActiveSessionComposerRegion(props: {
             // The container for the composer's `cqw` caps: only the composer re-evaluates as a panel beside it
             // animates the chat's width.
             <div class="@container">
-              <Show
-                when={!freeLimit.active()}
-                fallback={
-                  <SessionFreeLimitPanel
-                    resetAt={freeLimit.resetAt()}
-                    selection={() => props.model.composer.model.selection}
-                  />
-                }
-              >
-                <VoiceComposer session={props.session.data.info()}>
-                  <Composer
-                    model={props.model.composer}
-                    borderUnderlay
-                    readOnly={props.model.queue.undoing()}
-                    suggestionBoundary={props.suggestionBoundary}
-                  />
-                </VoiceComposer>
-              </Show>
+              <VoiceComposer session={props.session.data.info()}>
+                <Composer
+                  model={props.model.composer}
+                  borderUnderlay
+                  readOnly={props.model.queue.undoing()}
+                  suggestionBoundary={props.suggestionBoundary}
+                />
+              </VoiceComposer>
             </div>
           }
         >

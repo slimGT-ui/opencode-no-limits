@@ -1809,6 +1809,7 @@ test("providers: OpenCode Console signs in from its method list", async ({ page,
 
 test("providers: OpenCode Go connects with its own methods, not the Console sign-in", async ({ page }) => {
   const attempts: string[] = []
+  const keys: unknown[] = []
 
   const { settings } = await open(page, {
     integrations: consoleIntegrations,
@@ -1816,6 +1817,9 @@ test("providers: OpenCode Go connects with its own methods, not the Console sign
       attempts.push(input.integrationID)
 
       return { url: "https://auth.example.test/device?user_code=ABCD-EFGH" }
+    },
+    onConnectKey: (input) => {
+      keys.push(input.body)
     },
   })
 
@@ -1826,6 +1830,16 @@ test("providers: OpenCode Go connects with its own methods, not the Console sign
     .click()
   const dialog = page.getByRole("dialog", { name: "Connect OpenCode Go", exact: true })
   await expect(dialog.getByPlaceholder("API key")).toBeVisible()
+  expect(attempts).toEqual([])
+
+  await dialog.getByPlaceholder("API key").fill("sk-go-test")
+  const submitted = page.waitForRequest(
+    (request) =>
+      request.method() === "POST" && new URL(request.url()).pathname === "/api/integration/opencode-go/connect/key",
+  )
+  await dialog.getByRole("button", { name: "Continue", exact: true }).click()
+  await submitted
+  await expect.poll(() => keys).toEqual([expect.objectContaining({ key: "sk-go-test" })])
   expect(attempts).toEqual([])
 })
 
@@ -1903,7 +1917,7 @@ test("providers: Back during a pending API key request does not report the provi
   await expect(dialog.getByPlaceholder("API key")).toHaveValue("")
 })
 
-test("providers: the free tier upsell opens Go on its own, sized to its content", async ({ page }) => {
+test("providers: a free tier limit does not open the Go upsell", async ({ page }) => {
   const view = await openSession(page, { name: "FreeTier", integrations: consoleIntegrations })
   await view.push([
     {
@@ -1919,17 +1933,9 @@ test("providers: the free tier upsell opens Go on its own, sized to its content"
       },
     },
   ])
-  await page
-    .getByRole("dialog", { name: "Free limit reached" })
-    .getByRole("button", { name: "Subscribe", exact: true })
-    .click()
 
-  const dialog = page.getByRole("dialog", { name: "Connect OpenCode Go", exact: true })
-  const container = page.locator('[data-slot="dialog-container"]')
-  await expect(dialog.getByPlaceholder("API key")).toBeVisible()
-  // Nothing to go back to: the upsell opened the dialog straight on Go.
-  await expect(dialog.getByRole("navigation").getByRole("button")).toHaveCount(0)
-  await expect.poll(async () => (await container.boundingBox())?.height).toBeLessThan(512)
+  await expect(page.getByRole("dialog", { name: "Free limit reached" })).toHaveCount(0)
+  await expect(page.getByRole("dialog", { name: "Connect OpenCode Go" })).toHaveCount(0)
 })
 
 test("providers: the connect dialog lists connected providers and manages their accounts", async ({ page }) => {
