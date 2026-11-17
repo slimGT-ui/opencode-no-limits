@@ -58,21 +58,30 @@ export function useUsageExceededDialogs(_input?: {
     Persistence.struct({ lastSeenAt: Schema.NullOr(Schema.Finite) }),
     { lastSeenAt: null },
   )
+  let chatgptDialogPending = false
 
   onCleanup(
     sdk().event.on("session.step.failed", (evt) => {
-      if (evt.data.sessionID !== params.id || dialog.active) return
+      if (evt.data.sessionID !== params.id || dialog.active || chatgptDialogPending) return
       const error = evt.data.error
 
       if (error.type !== "provider.chatgpt-limit") return
 
       if (chatgptUsageLimit.lastSeenAt && Date.now() - chatgptUsageLimit.lastSeenAt < CHATGPT_USAGE_LIMIT_WINDOW) return
 
-      void import("@/providers/connect/chatgpt-usage-limit").then((usage) => {
-        if (dialog.active) return
-        setChatGPTUsageLimit("lastSeenAt", Date.now())
-        dialog.show(() => <usage.DialogChatGPTUsageLimit />)
-      })
+      chatgptDialogPending = true
+      void import("@/providers/connect/chatgpt-usage-limit")
+        .then((usage) => {
+          if (dialog.active) {
+            chatgptDialogPending = false
+            return
+          }
+          setChatGPTUsageLimit("lastSeenAt", Date.now())
+          dialog.show(() => <usage.DialogChatGPTUsageLimit />)
+        })
+        .catch(() => {
+          chatgptDialogPending = false
+        })
     }),
   )
 }
